@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install additional Python modules
 RUN pip3 install pyserial
 
+
 # Install additional ROS packages
 # RUN apt-get update && apt-get install -y --no-install-recommends \
 # ros-foxy-cartographer \
