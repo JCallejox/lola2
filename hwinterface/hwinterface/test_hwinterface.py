@@ -1,62 +1,44 @@
-import serial
-import struct
 import rclpy
 from rclpy.node import Node
-from math import copysign, pi
+
+from std_msgs.msg import String
 from sensor_msgs.msg import JointState
 
-rclpy.init()
 class HwClass(Node):
     def __init__(self):
         super().__init__('hwinterface')
 
-        #constant parameters
-        self.pasos_vuelta = 356.3 * 2
-        self.left = 0
-        self.right = 1
-        self.kdato = 127/3.14
-        self.twistTimeout = 20
-        self.lastTwistTime = self.get_clock().now().nanoseconds / 1e9
         #self.read_encoder_freq = self.get_parameter('/diff_drive_controller/publish_rate').value
-        self.read_encoder_freq = None
-        if self.read_encoder_freq is None:
-            self.read_encoder_freq = 6
+        self.read_encoder_freq = 0.5
 
-        #encoders data
-        self.time_enc_left_last = 0
-        self.time_enc_right_last = 0
-        self.steps_enc_left_last = 0
-        self.steps_enc_right_last = 0
-        self.arduino = serial.Serial('/dev/arduino', 115200)
-        data = self.arduino.readline()
-        self.get_logger().info(data)
-
-        #create the publisher
-        self.data_pub = self.create_publisher(JointState, "wheel_state", 10)
-
-        #create the subscriber
-        self.create_subscription(JointState, "cmd_wheel", self.callback_vel, 1)
-
-    def main(self):
-        self.get_logger().info("Iniciado nodo LOLA_interface")
-        self.get_logger().info("velocidad lectura: {}".format(self.read_encoder_freq))
-        #self.data_pub = self.create_publisher(JointState, "wheel_state", 10)
+        #self.arduino = serial.Serial('/dev/arduino', 115200)
         #data = self.arduino.readline()
         #self.get_logger().info(data)
-        #self.lastTwistTime = self.get_clock().now().to_sec()
-        self.dum_first_read()
+
+        # Create ROS2 publisher wheel state
+        self._name_publisher = "wheel_state"
+
+        self._wheel_pub = self.create_publisher(JointState, self._name_publisher, 10)
+        self._timer = self.create_timer(self.read_encoder_freq, self._publisher_callback)
+
+        #create the subscriber
         #self.create_subscription(JointState, "cmd_wheel", self.callback_vel, 1)
 
-        while rclpy.ok():
-            self.check()
-            self.read_encoders()
-            rclpy.spin_once(self)
 
+    def _publisher_callback(self):
+
+        msg = JointState()
+        #msg.data = 'Hello World: %d' % self.i
+
+        self._wheel_pub.publish(msg)
+        self.get_logger().info('Publishing: "%s"' % msg)
+
+    """
     def dum_first_read(self):
         self.get_logger().info("LECTURA DUMMY")
         #send the N letter to the serial port
         self.arduino.write(str('N').encode())
-        '''
+        
         #comienzo = self.arduino.readline()
         steps_enc_left = struct.unpack('i', self.arduino.read(4))[0]
         time_enc_left = struct.unpack('i', self.arduino.read(4))[0]
@@ -68,7 +50,7 @@ class HwClass(Node):
         self.time_enc_left_last = time_enc_left
         self.steps_enc_left_last = steps_enc_left
         self.get_logger().info(str(steps_enc_right))
-        '''
+
         self.steps_enc_left_last = struct.unpack('i', self.arduino.read(4))[0]
         self.time_enc_left_last = struct.unpack('i', self.arduino.read(4))[0]
         self.steps_enc_right_last = struct.unpack('i', self.arduino.read(4))[0]
@@ -91,7 +73,7 @@ class HwClass(Node):
         datod = int(round(comandD * self.kdato))
         datoi = int(round(comandI * self.kdato))
 
-        '''
+      
         # Saturation of data
         if abs(datod) > 127:
             datod = 127 * sign(datod)
@@ -109,7 +91,7 @@ class HwClass(Node):
             datod = 256 + datod
         if datoi < 0:
             datoi = 256 + datoi
-        '''
+       
         datod = min(127, max(10 * sign(datod), datod)) if datod != 0 else 0
         datoi = min(127, max(10 * sign(datoi), datoi)) if datoi != 0 else 0
         datod = 256 + datod if datod < 0 else datod
@@ -170,7 +152,18 @@ class HwClass(Node):
         #publish topic
         self.data_pub.publish(data)
         self.get_logger().info("WI: %.2f   WD: %.2f" % (wi, wd))
+    """
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    minimal_subscriber = HwClass()
+
+    rclpy.spin(minimal_subscriber)
+
+    minimal_subscriber.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
-	foo = HwClass()
-	foo.main()
+    main()

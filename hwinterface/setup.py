@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'hwinterface_klk = hwinterface.test_hwinterface:HwClass'
+            'hwinterface_klk = hwinterface.test_hwinterface:main',
+            'subscriber = hwinterface.subscriber_test:main'
         ],
     },
 )
